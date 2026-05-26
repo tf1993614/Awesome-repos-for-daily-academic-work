@@ -1,4 +1,4 @@
-# Great-githubs-for-daily-academic-work
+# Awesome-repos-for-daily-academic-work
 
 
 ## Harnesss framework
@@ -19,3 +19,6 @@
 [Frontend Slides](https://github.com/zarazhangrui/frontend-slides)
 
 [ppt-skills](https://github.com/op7418/guizang-ppt-skill)
+
+## plugin market
+[Awesome Claude Skills](https://awesome-skills.com/)
