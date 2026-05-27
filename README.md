@@ -24,3 +24,8 @@
 
 ## plugin market
 [Awesome Claude Skills](https://awesome-skills.com/)
+
+## grant application
+[nsfc-review](https://github.com/jinyh/nsfc-review/tree/main)
+
+[ChineseResearchLaTeX](https://github.com/huangwb8/ChineseResearchLaTeX)
