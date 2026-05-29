@@ -4,7 +4,7 @@
 [claude-how-to](https://github.com/luongnv89/claude-howto/)
 
 ## Harnesss framework
-[everything-claude-code](https://github.com/op7418/guizang-ppt-skill) 
+[everything-claude-code](https://github.com/affaan-m/ECC) 
 
 [super-powers](https://github.com/obra/superpowers)
 
