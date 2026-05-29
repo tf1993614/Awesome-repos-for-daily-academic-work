@@ -31,3 +31,6 @@
 [ChineseResearchLaTeX](https://github.com/huangwb8/ChineseResearchLaTeX)
 
 [nsfc-skills](https://github.com/wangjinger1218/nsfc-skills/tree/main)
+
+## Software copyright
+[China-software-copyright](https://github.com/AlexanderZhou01/China-software-copyright/tree/master)
