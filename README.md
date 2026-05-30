@@ -34,3 +34,6 @@
 
 ## Software copyright
 [China-software-copyright](https://github.com/AlexanderZhou01/China-software-copyright/tree/master)
+
+## Smart tools
+[remove-NanoBanana-watermark](https://geminiwatermarkremover.io/)
