@@ -15,6 +15,8 @@
 
 [Acacemic-research-skills](https://github.com/Imbad0202/academic-research-skills)
 
+[Awesome-ai-research-writing-skills](https://github.com/Leey21/awesome-ai-research-writing#skills-%E6%80%BB%E8%A7%88)
+
 ## Presentation
 [ppt-master](https://github.com/hugohe3/ppt-master)
 
