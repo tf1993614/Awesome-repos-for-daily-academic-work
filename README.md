@@ -17,8 +17,6 @@
 
 [Acacemic-research-skills](https://github.com/Imbad0202/academic-research-skills)
 
-[Awesome-ai-research-writing-skills](https://github.com/Leey21/awesome-ai-research-writing#skills-%E6%80%BB%E8%A7%88)
-
 [Claude-research-kit](https://github.com/tansuasici/claude-research-kit/tree/main)
 
 ## Presentation
@@ -42,7 +40,7 @@
 [China-software-copyright](https://github.com/AlexanderZhou01/China-software-copyright/tree/master)
 
 ## Writing 
-[awesome-ai-research-writing](https://github.com/Leey21/awesome-ai-research-writing#skills-%E6%80%BB%E8%A7%88)
+[Awesome-ai-research-writing](https://github.com/Leey21/awesome-ai-research-writing#skills-%E6%80%BB%E8%A7%88)
 
 [humanizer](https://github.com/blader/humanizer)
 
