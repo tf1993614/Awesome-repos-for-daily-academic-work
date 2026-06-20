@@ -3,6 +3,8 @@
 ## Know how
 [claude-how-to](https://github.com/luongnv89/claude-howto/)
 
+[Learn-claude-code](https://github.com/shareAI-lab/learn-claude-code)
+
 ## Harnesss framework
 [everything-claude-code](https://github.com/affaan-m/ECC) 
 
@@ -16,6 +18,8 @@
 [Acacemic-research-skills](https://github.com/Imbad0202/academic-research-skills)
 
 [Awesome-ai-research-writing-skills](https://github.com/Leey21/awesome-ai-research-writing#skills-%E6%80%BB%E8%A7%88)
+
+[Claude-research-kit](https://github.com/tansuasici/claude-research-kit/tree/main)
 
 ## Presentation
 [ppt-master](https://github.com/hugohe3/ppt-master)
