@@ -45,4 +45,6 @@
 [humanizer](https://github.com/blader/humanizer)
 
 ## Smart tools
-[remove-NanoBanana-watermark](https://geminiwatermarkremover.io/)
+[Remove-NanoBanana-watermark](https://geminiwatermarkremover.io/)
+
+[Claude-skill-model-fingerprint](https://github.com/rt22766/claude-skill-model-fingerprint)
