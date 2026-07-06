@@ -42,6 +42,9 @@
 ## Writing 
 [Awesome-ai-research-writing](https://github.com/Leey21/awesome-ai-research-writing#skills-%E6%80%BB%E8%A7%88)
 
+## Reading
+[Book-to-skill](https://github.com/virgiliojr94/book-to-skill)
+
 [humanizer](https://github.com/blader/humanizer)
 
 ## Smart tools
