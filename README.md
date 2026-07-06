@@ -19,6 +19,8 @@
 
 [Claude-research-kit](https://github.com/tansuasici/claude-research-kit/tree/main)
 
+[Nature-skills](https://github.com/Yuan1z0825/nature-skills)
+
 ## Presentation
 [ppt-master](https://github.com/hugohe3/ppt-master)
 
