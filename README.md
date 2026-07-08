@@ -56,3 +56,5 @@
 [Claude-skill-model-fingerprint](https://github.com/rt22766/claude-skill-model-fingerprint)
 
 [Mini-SWE-Agent](https://github.com/SWE-agent/mini-swe-agent)
+
+[AutoZyme](https://github.com/ElliotXie/autozyme)
