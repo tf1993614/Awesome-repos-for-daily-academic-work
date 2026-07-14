@@ -49,6 +49,11 @@
 ## Reading
 [Book-to-skill](https://github.com/virgiliojr94/book-to-skill)
 
+## Prompt collection
+[awesome-gpt-image-2](https://github.com/freestylefly/awesome-gpt-image-2)
+
+[GPT-Image2-Skill](https://github.com/wuyoscar/GPT-Image2-Skill)
+
 
 ## Smart tools
 [Remove-NanoBanana-watermark](https://geminiwatermarkremover.io/)
