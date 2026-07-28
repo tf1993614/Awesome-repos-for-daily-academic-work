@@ -10,6 +10,8 @@
 
 [super-powers](https://github.com/obra/superpowers)
 
+[Skills For Real Engineers](https://github.com/mattpocock/skills/tree/main)
+
 ## AI research assistant
 [Claude-Scholar](https://github.com/Galaxy-Dawn/claude-scholar)
 
