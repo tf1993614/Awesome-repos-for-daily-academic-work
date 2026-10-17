@@ -65,3 +65,7 @@
 [Mini-SWE-Agent](https://github.com/SWE-agent/mini-swe-agent)
 
 [AutoZyme](https://github.com/ElliotXie/autozyme)
+
+
+## Computer
+[Aodbe Acrobat DC Pro](https://github.com/shirayner/java-knowledge-hierarchy/blob/master/doc/Computer/01-Windows/00-Window%E4%B8%8A%E6%88%91%E6%89%80%E5%AE%89%E8%A3%85%E7%9A%84%E8%BD%AF%E4%BB%B6.md): One software dependencies (amtemu.v0.9.2-painter.zip) can be found [here](https://github.com/0577215664/amtemu.v0.9.2-painter-tool) 
