@@ -26,4 +26,6 @@ After application, regenerate the report: verification compares current file con
 
 Pass exact redundant paths with repeated `plan-register --archive-registration PATH` options. Sources must be recognizable PROJECT.md files outside active project roots. Application also requires `--allow-registration-archive`. Use these flags only for an authorized placement repair, not simply because old registrations exist.
 
-Copy originals into versioned backups, verify them, then remove the misplaced metadata. No arbitrary file deletion, directory deletion, wildcard cleanup, or business-data deletion command is provided.
+Copy originals into versioned backups, verify them, then remove the misplaced metadata. Placement repair never handles business data or recursively deletes directories.
+
+Business cleanup is a separate workflow: read [cleanup-future.md](cleanup-future.md) before handling its events. Its durable operation log is authoritative; registration and fresh measurement are independently retryable finalization. Ordinary inventory plans still change capacity only and never advance cleaning dates.

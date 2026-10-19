@@ -60,6 +60,14 @@ def read_config(path=None):
     if raw.get('schema_version', 1) != 1:
         raise ValueError('Unsupported profile version')
     c = dict(raw)
+    if path:
+        c.setdefault('cleanup_registry', absolute(str(Path(path).absolute()) + '.cleanup.json'))
+    c['cleanup_registries'] = list(dict.fromkeys([*c.get('cleanup_registries', []),
+                                                *([c['cleanup_registry']] if c.get('cleanup_registry') else [])]))
+    for key in ('quarantine_roots', 'runtime_paths', 'cleanup_registries'):
+        c[key] = [absolute(p) for p in c.get(key, [])]
+    if c.get('cleanup_registry'):
+        c['cleanup_registry'] = absolute(c['cleanup_registry'])
     c.setdefault('uid', os.getuid())
     c.setdefault('aliases', [])
     c.setdefault('threshold_bytes', 100_000_000_000)
@@ -141,6 +149,29 @@ def dump(path, value):
             os.unlink(tmp)
 
 
+RUNTIME_MARKER = '.data-manager-runtime.json'
+
+
+def mark_runtime(directory, kind):
+    dump(Path(directory) / RUNTIME_MARKER, {'schema_version': 1, 'kind': 'data-manager-runtime',
+                                          'directory': absolute(str(Path(directory).absolute())), 'purpose': kind})
+
+
+def is_runtime(directory):
+    marker = Path(directory) / RUNTIME_MARKER
+    no_symlink_path(marker)
+    if not marker.is_file():
+        return False
+    if marker.stat().st_size > 4096:
+        return False
+    try:
+        value = json.loads(marker.read_text())
+        return (isinstance(value, dict) and value.get('schema_version') == 1 and value.get('kind') == 'data-manager-runtime'
+                and value.get('directory') == str(Path(directory).absolute()))
+    except (ValueError, UnicodeError):
+        return False
+
+
 def connect(run):
     p = Path(run) / 'inventory.sqlite'
     if not p.is_file():
@@ -166,6 +197,7 @@ def create_db(run, config):
     p = out / 'inventory.sqlite'
     if p.exists():
         raise ValueError('Run already exists. Use --resume or choose a fresh output directory.')
+    mark_runtime(out, 'inventory')
     db = sqlite3.connect(p)
     db.row_factory = sqlite3.Row
     db.executescript('''
@@ -425,6 +457,7 @@ def aggregate(run):
 def discover(config, output, full=False, max_depth=2):
     """Discovery is separate from ownership confirmation and inventory completion."""
     out = Path(output); no_symlink_path(out); out.mkdir(parents=True, exist_ok=True)
+    mark_runtime(out, 'discovery')
     mount_rows = mounts()
     dump(out / 'mounts.json', mount_rows)
     candidates, errors, skipped, coverage = [], [], [], []

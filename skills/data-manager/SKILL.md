@@ -1,6 +1,6 @@
 ---
 name: data-manager
-description: Inventory user-managed storage across local disks, NAS, and object-storage mounts, report directory allocation, and create or refresh project-level PROJECT.md registrations. Use for storage inventories, ownership discovery, and project registration maintenance. Duplicate detection and business-data cleanup are not implemented in this version.
+description: Inventory user-managed storage, maintain project PROJECT.md registrations, and detect duplicate files or compressed/uncompressed equivalents. Use for storage inventories, ownership discovery, reviewed local quarantine, recovery, and separately authorized purge. Remote storage supports inventory and duplicate detection only.
 ---
 
 # Data Manager
@@ -54,9 +54,13 @@ Placement repair is an explicit metadata operation: list exact redundant PROJECT
 
 Report management scope/exclusions, discovery coverage, measurement status/unknowns, and registration verification separately. Success in one phase does not establish another. Link the Markdown report, project CSV, and full directory CSV. State the scope of completion, observed totals, backup-copy accounting, and unresolved items. Read back resulting metadata; historical success flags alone are insufficient.
 
-## Future cleanup
+## Duplicate detection and cleanup
 
-Version 1 has no duplicate search, quarantine, purge, or business-file deletion command. For requests to add these capabilities, read [references/cleanup-future.md](references/cleanup-future.md). It is a future specification, not execution authority. Installing or testing this skill does not authorize changes to live datasets or registrations.
+Read [references/cleanup-future.md](references/cleanup-future.md) before duplicate detection, preparing cleanup selections, isolation, recovery, purge, or resolving interrupted operations. Content equivalence is evidence, not proof of business redundancy. Keep compressed copies when verified against extracted contents. Review exact handled paths, retained dependencies, and attribute restoration limits.
+
+Only independent regular files in confirmed local projects can be handled. Stop related writers. Quarantine requires a private dedicated root outside all projects on the same mount; it still occupies storage. Restore rejects existing original paths. Purge requires an explicit instruction for the exact reviewed quarantine set; quarantine authorization does not authorize purge. Remote-only retained copies cannot support local cleanup. Hardlinks remain report-only.
+
+Use operation logs as mutation evidence. Fresh scans cover affected projects and quarantine, not all managed storage. Retry failed measurement/registration finalization without repeating data actions. Inventory alone never updates cleaning dates. Installing, developing, or testing the skill does not authorize operations on live datasets.
 
 ## Maintenance
 

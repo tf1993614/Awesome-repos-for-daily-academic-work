@@ -14,6 +14,8 @@ Profiles use JSON schema version 1. Copy the bundled example into a working area
 | `include_mounts` | Explicitly included nested mount targets |
 | `threshold_bytes` | Strict business-allocation threshold; default 100000000000 |
 | `local_workers`, `remote_workers` | Concurrent directory reads; defaults 4 and 8, maximum 64 |
+| `quarantine_roots`, `runtime_paths` | Optional absolute paths protected from duplicate handling and unassigned-project suggestions; their allocation remains counted |
+| `cleanup_registry`, `cleanup_registries` | Writable cleanup sidecar location and additional registry paths; default sidecar is `PROFILE.json.cleanup.json` |
 
 Managed/project roots use absolute paths without symbolic-link ancestors. Overlapping managed roots are rejected; use a single root with explicit nested mounts or separate non-overlapping scopes. Project roots cannot overlap or also be containers. Association labels are not content comparisons.
 

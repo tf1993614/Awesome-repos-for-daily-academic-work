@@ -1,0 +1,3 @@
+# Journal data mutations independently of registration finalization
+
+Business-file operations require durable intentions before atomic no-replace moves or unlink, followed by verified results. Keep this journal authoritative and make fresh measurement and PROJECT.md updates independently retryable: a metadata failure must not repeat a successful move or deletion. Stop on ambiguous interrupted mutations instead of inferring success from a missing path; quarantine and permanent purge have separate reviewed scopes, and neither allocation differences nor filesystem free-space changes prove attributable physical release.

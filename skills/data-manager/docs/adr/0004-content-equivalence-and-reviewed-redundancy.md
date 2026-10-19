@@ -1,0 +1,3 @@
+# Separate content equivalence from reviewed redundancy
+
+Files and decoded archive members may contain identical bytes while serving different working or backup purposes. Detect complete byte equality, but require a path-specific review of redundancy and retained dependencies before cleanup; compressed matches retain the local compressed representation. This supports ordinary research-data cleanup without claiming that ZIP/gzip can restore names, permissions, ownership, ACLs, or extended attributes; disclose those limits rather than imposing attribute equivalence that would exclude most compressed data.

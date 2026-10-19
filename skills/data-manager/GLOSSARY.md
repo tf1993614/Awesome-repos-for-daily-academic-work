@@ -51,3 +51,23 @@ _Avoid_: ignored data, implicit home project
 **Registration**:
 A storage copy's capacity and management record, including its cleaning history.
 _Avoid_: cleanup history reset on every scan
+
+**Content equivalence**:
+Verified equality of complete byte contents, including a compressed representation's decoded contents. It does not establish interchangeable uses or equivalent file attributes.
+_Avoid_: redundancy, lossless restoration
+
+**Reviewed redundancy**:
+Content-equivalent data explicitly selected as unnecessary for its current purpose, after considering working copies and deliberate backups.
+_Avoid_: every duplicate, automatic deletion candidate
+
+**Retained copy**:
+The explicitly chosen file or archive member that preserves handled data's complete byte contents and remains available after cleanup.
+_Avoid_: matching project ID, assumed backup
+
+**Quarantine set**:
+A recorded collection of files moved out of active project locations while retaining their original-path mappings and content identity. Quarantine continues to occupy storage.
+_Avoid_: freed space, purged data
+
+**Purge**:
+Permanent removal of an explicitly reviewed quarantine set while its retained copies remain verified. Physical storage release may remain unknown.
+_Avoid_: quarantine, estimated reclaimed bytes

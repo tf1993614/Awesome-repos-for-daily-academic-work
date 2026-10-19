@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inventory managed storage and maintain PROJECT.md metadata, without data cleanup."""
+"""Inventory managed storage, register projects, and execute reviewed local cleanup."""
 from __future__ import annotations
 
 import argparse
@@ -8,9 +8,14 @@ import json
 import os
 from pathlib import Path
 import sys
+import tarfile
+import zipfile
+import lzma
 
-from inventory import aggregate, connect, discover, dump, meta, no_symlink_path, read_config, scan, within
+from inventory import RUNTIME_MARKER, aggregate, connect, discover, dump, is_runtime, meta, no_symlink_path, read_config, scan, within
 from registration import apply, plan, read_metadata
+import content as contents
+import cleanup
 
 
 def write_csv(path, fields, rows):
@@ -30,6 +35,9 @@ def report(run):
         db.close(); aggregate(run); db = connect(run)
     try:
         c = meta(db, 'config'); run = Path(run)
+        runtime = contents.runtime_roots(c)
+        runtime += [str(Path(r['path']).parent) for r in db.execute('SELECT path FROM nodes WHERE kind="file"')
+                    if Path(r['path']).name == RUNTIME_MARKER and is_runtime(Path(r['path']).parent)]
         measures = {r['path']: dict(r) for r in db.execute('SELECT * FROM measures')}
         issues = [dict(r) for r in db.execute('SELECT * FROM issues ORDER BY path,kind')]
         tasks = {r['path']: r['state'] for r in db.execute('SELECT path,state FROM tasks')}
@@ -72,7 +80,10 @@ def report(run):
                     p['registration_status'] = 'verified' if good else 'changed_since_verification'
         for container in sorted(containers):
             # Direct loose files are never silently assigned to the whole home.
-            files = db.execute('SELECT * FROM nodes WHERE parent=? AND kind!="directory"', (container,)).fetchall()
+            if any(within(container, r) for r in runtime):
+                continue
+            files = [f for f in db.execute('SELECT * FROM nodes WHERE parent=? AND kind!="directory"', (container,))
+                     if not any(within(f['path'], r) for r in runtime)]
             unique = {}
             for f in files:
                 previous = unique.get(f['identity'])
@@ -86,7 +97,7 @@ def report(run):
                                    'registration_status': 'pending_project_boundary' if business > c['threshold_bytes'] else 'below_threshold_unassigned'})
             for child in db.execute('SELECT path,excluded FROM nodes WHERE parent=? AND kind="directory"', (container,)):
                 path = child['path']
-                if path in containers or any(within(path, r) for r in project_roots) or child['excluded']:
+                if path in containers or any(within(path, r) for r in project_roots + runtime) or child['excluded']:
                     continue
                 row = measures.get(path)
                 if row:
@@ -109,6 +120,7 @@ def report(run):
                    'project_count': len(projects), 'required_count': sum(p['required'] is True for p in projects),
                    'verified_count': sum(p['registration_status'] == 'verified' for p in projects),
                    'unassigned_count': len(unassigned)}
+        summary['cleanup_runtime_roots'] = runtime
         if summary['scan_status'] != 'complete':
             summary['registration_status'] = 'pending'
         dump(run / 'summary.json', summary)
@@ -117,7 +129,8 @@ def report(run):
                  '## 口径', '', '阈值依据：业务占用严格超过 ' + str(c['threshold_bytes']) + ' 字节。GB 使用十进制。',
                  '逻辑大小按路径统计；分配占用在目录内去重可靠 inode 的硬链接。整体去重总量另算，项目及父子目录不能直接相加。',
                  '远端数据使用挂载报告占用，不等于后端实际物理空间或云端计费容量；未知值不以逻辑大小替代。',
-                 '环境/缓存只有经证据确认才扣除；业务文件未清理，本次不刷新最近清理日期。', '',
+                 '环境/缓存只有经证据确认才扣除；盘点不执行清理，不刷新最近清理日期。',
+                 '管理范围中的隔离内容仍计入整体占用，隔离根与清理运行目录不列为待归属项目；清理报告单列隔离占用。', '',
                  '## 管理范围', '', '| 目录 | 归属证据 | 总占用 GB | 业务占用 GB | 统计状态 |', '|---|---|---:|---:|---|']
         for r in c['managed_roots']:
             row = measures.get(r['path'])
@@ -167,6 +180,22 @@ def main(argv=None):
     p.add_argument('--manifest', required=True); p.add_argument('--allow-registration-archive', action='store_true')
     p = sub.add_parser('report', help='Regenerate reports and read back previously verified registrations')
     p.add_argument('--run', required=True)
+    p = sub.add_parser('find-duplicates', help='Read-only whole-content and archive-member verification')
+    p.add_argument('--run', required=True); p.add_argument('--output', required=True)
+    p.add_argument('--max-expanded', type=int, default=contents.MAX_EXPANDED)
+    p.add_argument('--max-members', type=int, default=contents.MAX_MEMBERS)
+    p = sub.add_parser('plan-cleanup', help='Prepare exact reviewed quarantine actions')
+    p.add_argument('--duplicates', required=True); p.add_argument('--selection', required=True); p.add_argument('--output', required=True)
+    p = sub.add_parser('apply-cleanup', help='Quarantine an authorized manifest; stop all related writers first')
+    p.add_argument('--manifest', required=True)
+    p = sub.add_parser('restore-cleanup', help='Restore verified isolated files without overwriting; stop writers first')
+    p.add_argument('--operation', required=True)
+    p = sub.add_parser('plan-purge', help='Prepare a separately reviewed permanent purge set')
+    p.add_argument('--cleanup', required=True); p.add_argument('--output', required=True)
+    p = sub.add_parser('purge', help='Permanently delete only the explicitly authorized quarantine set; stop writers first')
+    p.add_argument('--manifest', required=True)
+    p = sub.add_parser('report-cleanup', help='Verify current cleanup results and retry only measurement/registration finalization')
+    p.add_argument('--operation', required=True)
     args = parser.parse_args(argv)
     try:
         if args.command == 'discover':
@@ -182,16 +211,43 @@ def main(argv=None):
             result = apply(args.manifest, args.allow_registration_archive)
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return 1 if any(r['status'] != 'verified' for r in result['results']) else 0
+        elif args.command == 'find-duplicates':
+            if args.max_expanded < 1 or args.max_members < 1:
+                raise ValueError('Archive limits must be positive')
+            result = contents.find_duplicates(args.run, args.output, args.max_expanded, args.max_members)
+        elif args.command == 'plan-cleanup':
+            result = cleanup.plan_cleanup(args.duplicates, args.selection, args.output)
+        elif args.command == 'apply-cleanup':
+            manifest = Path(args.manifest).absolute()
+            if manifest.name != 'manifest.json':
+                raise ValueError('Expected the operation manifest.json')
+            result = cleanup.execute(manifest.parent)
+        elif args.command == 'restore-cleanup':
+            result = cleanup.execute(args.operation, 'restore')
+        elif args.command == 'plan-purge':
+            result = cleanup.plan_purge(args.cleanup, args.output)
+        elif args.command == 'purge':
+            manifest = cleanup.load(args.manifest)
+            result = cleanup.execute(manifest['operation'], 'purge', manifest)
+        elif args.command == 'report-cleanup':
+            result = cleanup.report_cleanup(args.operation)
         else:
             result = report(args.run)
         print(json.dumps(result, ensure_ascii=False, indent=2))
         if args.command in {'scan', 'report'} and result['scan_status'] != 'complete':
             return 2
+        if args.command == 'find-duplicates' and result['status'] != 'complete':
+            return 2
+        if args.command in {'apply-cleanup', 'restore-cleanup', 'purge', 'report-cleanup'} and result['status'] != 'complete':
+            return 2
         return 0
     except KeyboardInterrupt:
-        print('Interrupted. Checkpoints preserved; resume scan with the identical profile.', file=sys.stderr)
+        if args.command in {'apply-cleanup', 'restore-cleanup', 'purge', 'report-cleanup'}:
+            print('Interrupted. Inspect the preserved operation state; uncertain mutation intentions require manual recovery.', file=sys.stderr)
+        else:
+            print('Interrupted. Capacity scan checkpoints may be resumed with the identical profile; detection uses a fresh output directory.', file=sys.stderr)
         return 130
-    except (ValueError, OSError) as exc:
+    except (ValueError, OSError, KeyError, TypeError, EOFError, RuntimeError, tarfile.TarError, zipfile.BadZipFile, lzma.LZMAError) as exc:
         print(f'Error: {exc}', file=sys.stderr)
         return 1
 
