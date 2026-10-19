@@ -12,6 +12,8 @@
 
 [Skills For Real Engineers](https://github.com/mattpocock/skills/tree/main)
 
+[Claude Code skills from HumanLayer](https://github.com/humanlayer/skills/tree/main)
+
 ## AI research assistant
 [Claude-Scholar](https://github.com/Galaxy-Dawn/claude-scholar)
 
