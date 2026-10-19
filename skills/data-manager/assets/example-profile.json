@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "owner": "your-account",
+  "uid": 1000,
+  "aliases": ["your-account"],
+  "managed_roots": [{"path": "/home/your-account", "evidence": "Confirmed current account home"}],
+  "containers": ["/home/your-account", "/home/your-account/projects"],
+  "projects": [{"path": "/home/your-account/projects/example", "evidence": "User-confirmed boundary", "project_id": "example"}],
+  "system_paths": [{"path": "/home/your-account/.cache", "evidence": "Confirmed account application cache"}],
+  "out_of_scope": [],
+  "include_mounts": [],
+  "threshold_bytes": 100000000000,
+  "local_workers": 4,
+  "remote_workers": 8
+}

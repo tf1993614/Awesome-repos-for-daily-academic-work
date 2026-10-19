@@ -1,0 +1,4 @@
+interface:
+  display_name: "Data Manager"
+  short_description: "Inventory managed storage and maintain project registrations"
+  default_prompt: "Use $data-manager to inventory my managed storage and prepare accurate project registrations."
