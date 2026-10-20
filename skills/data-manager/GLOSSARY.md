@@ -65,9 +65,9 @@ The explicitly chosen file or archive member that preserves handled data's compl
 _Avoid_: matching project ID, assumed backup
 
 **Quarantine set**:
-A recorded collection of files moved out of active project locations while retaining their original-path mappings and content identity. Quarantine continues to occupy storage.
+A recorded collection of data removed from active project locations while retaining isolated contents, original-location mappings, and content identity. Quarantine continues to occupy storage.
 _Avoid_: freed space, purged data
 
 **Purge**:
-Permanent removal of an explicitly reviewed quarantine set while its retained copies remain verified. Physical storage release may remain unknown.
+Permanent removal of an explicitly reviewed quarantine set while its retained copies remain verified. Other historical versions can remain; physical storage release may remain unknown.
 _Avoid_: quarantine, estimated reclaimed bytes

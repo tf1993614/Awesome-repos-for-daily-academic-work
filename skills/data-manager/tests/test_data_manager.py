@@ -29,6 +29,15 @@ class Fixture(unittest.TestCase):
         self.profile = self.base / 'profile.json'
         self.config = self.configure()
         self.serial = 0
+        git_context = reg.git_context
+        def fixture_git_context(root):
+            if not any((p / '.git').exists() for p in [root, *root.parents]
+                       if inv.within(str(p), str(self.base))):
+                return False, False
+            return git_context(root)
+        # Test only Git metadata created by this fixture, not unrelated /tmp ancestors.
+        git = patch.object(reg, 'git_context', side_effect=fixture_git_context)
+        git.start(); self.addCleanup(git.stop)
 
     def tearDown(self):
         self.temp.cleanup()
@@ -60,6 +69,14 @@ class Fixture(unittest.TestCase):
             return dict(db.execute('SELECT * FROM measures WHERE path=?', (str(path),)).fetchone())
         finally:
             db.close()
+
+    def test_cli_accepts_relative_profile_paths(self):
+        self.data(self.a / 'data.bin')
+        result = subprocess.run([sys.executable, '-B', str(SCRIPTS / 'data_manager.py'),
+                                 'scan', '--config', self.profile.name, '--output', str(self.base / 'relative-run')],
+                                cwd=self.base, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)['scan_status'], 'complete')
 
     def old_registration(self, path):
         text = reg.new_registration({'path': str(path.parent), 'description': 'keep my description'}, 'original-owner', 'old capacity')

@@ -13,6 +13,7 @@ from pathlib import Path, PurePosixPath
 import stat
 import tarfile
 import zipfile
+import remote_io
 
 from inventory import (RELIABLE_INODES, RUNTIME_MARKER, absolute, connect, dump, is_runtime,
                        mark_runtime, meta, mount_for, mounts, no_symlink_path, now, within)
@@ -39,7 +40,7 @@ def regular(path):
             if not stat.S_ISREG(before.st_mode):
                 raise ValueError(f'Not a regular file: {path}')
             with os.fdopen(fd, 'rb', closefd=False) as stream:
-                yield stream, before, os.fstat(parent)
+                yield remote_io.reader(stream, path), before, os.fstat(parent)
             if fingerprint(os.fstat(fd)) != fingerprint(before):
                 raise ValueError(f'File changed while reading: {path}')
             if fingerprint(os.stat(name, dir_fd=parent, follow_symlinks=False)) != fingerprint(before):
@@ -114,7 +115,8 @@ class PayloadReader:
         return block
 
 
-def archive_evidence(path, max_expanded=MAX_EXPANDED, max_members=MAX_MEMBERS, comparisons=None):
+def archive_evidence(path, max_expanded=MAX_EXPANDED, max_members=MAX_MEMBERS, comparisons=None,
+                     source=None, comparison_open=regular):
     """Validate all members, optionally comparing selected members to ordinary files."""
     suffix = archive_type(path)
     if suffix is None:
@@ -124,9 +126,15 @@ def archive_evidence(path, max_expanded=MAX_EXPANDED, max_members=MAX_MEMBERS, c
     comparisons = comparisons or {}
     entries = []; seen = set(); total = 0
     with contextlib.ExitStack() as stack:
-        raw, s, parent = stack.enter_context(regular(path))
-        attrs = attributes(raw, s)
-        compare_streams = {key: stack.enter_context(regular(value))[0] for key, value in comparisons.items()}
+        if source is None:
+            raw, s, parent = stack.enter_context(regular(path))
+            attrs = attributes(raw, s)
+            common = {'path': absolute(str(path)), 'fingerprint': fingerprint(s),
+                      'parent_identity': [parent.st_dev, parent.st_ino], 'attributes': attrs,
+                      'mount': mount_for(absolute(str(path)), mounts())}
+        else:
+            raw, common = stack.enter_context(source())
+        compare_streams = {key: stack.enter_context(comparison_open(value))[0] for key, value in comparisons.items()}
 
         def consume(stream, member, kind='member', member_attributes=None):
             nonlocal total
@@ -201,9 +209,6 @@ def archive_evidence(path, max_expanded=MAX_EXPANDED, max_members=MAX_MEMBERS, c
         keys = {(e['kind'], e['member']) for e in entries}
         if not set(comparisons).issubset(keys):
             raise ValueError('Retained archive member missing')
-        common = {'path': absolute(str(path)), 'fingerprint': fingerprint(s),
-                  'parent_identity': [parent.st_dev, parent.st_ino], 'attributes': attrs,
-                  'mount': mount_for(absolute(str(path)), mounts())}
         return [dict(common, **entry) for entry in entries]
 
 
@@ -264,6 +269,7 @@ def find_duplicates(run, output, max_expanded=MAX_EXPANDED, max_members=MAX_MEMB
     db = connect(run)
     try:
         config = meta(db, 'config')
+        remote_io.configure(config)
         rows = [dict(r) for r in db.execute('SELECT * FROM nodes WHERE kind="file" AND excluded=0 ORDER BY path')]
         scan_status = meta(db, 'scan_status')
     finally:
@@ -361,5 +367,5 @@ def find_duplicates(run, output, max_expanded=MAX_EXPANDED, max_members=MAX_MEMB
     (output / 'REPORT.md').write_text('# 重复内容检测\n\n' +
         f'状态：{result["status"]}；匹配关系：{len(matches)}；硬链接记录：{len(hardlinks)}；问题：{len(issues)}。\n\n' +
         '内容等价不代表业务冗余。逐项审核 duplicates.csv 和 duplicates.json，明确用途及保留依赖。\n' +
-        '仅保证字节内容证据，压缩包不保证恢复权限、属主、ACL 或扩展属性。远端和硬链接仅报告。\n')
+        '仅保证字节内容证据，压缩包不保证恢复权限、属主、ACL 或扩展属性。远端清理须通过对应后端能力检查；硬链接仅报告。\n')
     return {'output': str(output), 'status': result['status'], 'matches': len(matches), 'issues': len(issues)}

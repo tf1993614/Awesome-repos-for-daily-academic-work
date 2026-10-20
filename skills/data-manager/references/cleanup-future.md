@@ -16,7 +16,7 @@ Supported formats: gzip, bzip2, xz, ZIP, tar, tar.gz, tar.bz2, tar.xz, tgz, tbz2
 
 Every stage validates the whole relied-on archive, including unrelated members and compression checksums. Evidence is shared across members within a stage and invalidated by changes. Hashing and final byte comparisons may require multiple full passes. Unsafe or duplicate paths, links, sparse tar entries, encryption, corruption, and unsupported formats remain pending. Default limits are 1 TiB of expanded content and 1,000,000 members per archive; change `--max-expanded` and `--max-members` explicitly. Partial detection exits 2; its verified matches remain individually reviewable.
 
-Review `duplicates.json`, `duplicates.csv`, `REPORT.md`, and hardlink records. Only confirmed local project files with one hardlink may be handled. Keepers must also be local in-scope business files; remote-only retained copies cannot support local cleanup.
+Review `duplicates.json`, `duplicates.csv`, `REPORT.md`, and hardlink records. Only confirmed project files with one hardlink may be handled through this mounted workflow. Local keepers must be local in-scope business files; remote-only retained copies cannot support local cleanup. NAS requires same-mount keepers and successful capability evidence. Read [remote-cleanup.md](remote-cleanup.md) before NAS mutations or native TOS work; its object-copy and version rules are separate from mounted-file identity rules.
 
 ## Select exact paths
 
@@ -70,7 +70,7 @@ A per-profile sidecar defaults to `PROFILE.json.cleanup.json`; its exact `regist
 
 Registered quarantine/runtime paths are excluded from duplicate handling and unassigned-project suggestions. New runtime directories also carry a `.data-manager-runtime.json` marker, so historical outputs remain recognizable before any cleanup consumes them. List older unmarked outputs in profile `runtime_paths`. In-scope quarantine remains counted in global allocated/business bytes; it is not an environment exclusion or released space. Cleanup reports measure it separately.
 
-Verified completed entries are checked and skipped on reapplication; known unstarted entries may continue. A surviving `*_intent` status means an interrupted mutation is uncertain: automatic execution, recovery, and purge stop. Preserve the log and inspect both paths and identities. Do not erase intentions or fabricate verification evidence to force retries.
+Verified completed entries are checked and skipped on reapplication; known unstarted entries may continue. A surviving `*_intent` status means an interrupted mutation is uncertain: automatic execution, recovery, and purge stop. Use `reconcile-cleanup --operation OPERATION` to inspect interrupted moves without business-file mutations. Exact content/object identity and both locations can establish completed or unstarted moves; missing/conflicting identities and uncertain purge results stay pending. Preserve the log; do not erase intentions or fabricate verification evidence to force retries.
 
 ```bash
 python3 scripts/data_manager.py report-cleanup --operation OPERATION

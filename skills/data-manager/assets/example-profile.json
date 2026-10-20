@@ -11,5 +11,7 @@
   "include_mounts": [],
   "threshold_bytes": 100000000000,
   "local_workers": 4,
-  "remote_workers": 8
+  "remote_workers": 8,
+  "remote_io": {"workers": 4, "read_bytes_per_second": 67108864},
+  "nas_capabilities": []
 }

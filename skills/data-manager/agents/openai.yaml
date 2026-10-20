@@ -1,4 +1,4 @@
 interface:
   display_name: "Data Manager"
   short_description: "Inventory storage, verify duplicates, and manage reviewed cleanup"
-  default_prompt: "Use $data-manager to inventory my managed storage, maintain project registrations, and review duplicate contents before authorized local cleanup."
+  default_prompt: "Use $data-manager to inventory my managed storage, maintain project registrations, and review duplicate contents before authorized local, NAS, or TOS cleanup."

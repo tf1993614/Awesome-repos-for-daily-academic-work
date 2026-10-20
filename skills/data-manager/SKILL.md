@@ -1,6 +1,6 @@
 ---
 name: data-manager
-description: Inventory user-managed storage, maintain project PROJECT.md registrations, and detect duplicate files or compressed/uncompressed equivalents. Use for storage inventories, ownership discovery, reviewed local quarantine, recovery, and separately authorized purge. Remote storage supports inventory and duplicate detection only.
+description: Inventory user-managed storage, maintain project PROJECT.md registrations, and verify duplicate files or compressed contents. Use for ownership discovery, reviewed local/NAS/TOS quarantine, recovery, and separately authorized purge.
 ---
 
 # Data Manager
@@ -58,9 +58,11 @@ Report management scope/exclusions, discovery coverage, measurement status/unkno
 
 Read [references/cleanup-future.md](references/cleanup-future.md) before duplicate detection, preparing cleanup selections, isolation, recovery, purge, or resolving interrupted operations. Content equivalence is evidence, not proof of business redundancy. Keep compressed copies when verified against extracted contents. Review exact handled paths, retained dependencies, and attribute restoration limits.
 
-Only independent regular files in confirmed local projects can be handled. Stop related writers. Quarantine requires a private dedicated root outside all projects on the same mount; it still occupies storage. Restore rejects existing original paths. Purge requires an explicit instruction for the exact reviewed quarantine set; quarantine authorization does not authorize purge. Remote-only retained copies cannot support local cleanup. Hardlinks remain report-only.
+Local and NAS cleanup handles independent regular files in confirmed projects. NAS additionally requires verified capabilities and a keeper on the same mount. Stop related writers; tool locks do not stop other clients. Quarantine requires a private dedicated root outside all projects on the same mount and still occupies storage. Restore rejects existing original paths. Purge requires an explicit instruction for the exact reviewed quarantine set; quarantine authorization does not authorize purge. Remote-only retained copies cannot support local cleanup. Hardlinks remain report-only.
 
-Use operation logs as mutation evidence. Fresh scans cover affected projects and quarantine, not all managed storage. Retry failed measurement/registration finalization without repeating data actions. Inventory alone never updates cleaning dates. Installing, developing, or testing the skill does not authorize operations on live datasets.
+Read [references/remote-cleanup.md](references/remote-cleanup.md) before NAS capability probes or remote mutations, native TOS inventories/detection, reviewing remote policies, or reconciling remote timeouts. NAS uses capability-checked atomic no-replace moves. TOS uses the official SDK rather than FUSE mutations: same-bucket copy, complete verification, then original-location removal. Bind exact versions; preserve source history. Require dedicated protected quarantine, current access/retention review, and stopped writers. Unsupported or uncertain conditions remain pending. Remote reads and copies have **no cumulative byte limit**; default concurrency is 4 and aggregate client read pacing is 64 MiB/s, configurable. No automatic expiration or purge.
+
+Use operation logs as mutation evidence. `reconcile-cleanup` observes interrupted results without changing business data; ambiguous intentions continue to block mutations. Fresh scans cover affected projects and quarantine, not all managed storage. Retry failed measurement/registration finalization without repeating data actions. Unknown backend allocation/billing remains unknown and leaves capacity finalization pending. Inventory alone never updates cleaning dates. Installing, developing, or testing the skill does not authorize operations on live datasets. Test fixture success and real-backend validation are separate evidence.
 
 ## Maintenance
 

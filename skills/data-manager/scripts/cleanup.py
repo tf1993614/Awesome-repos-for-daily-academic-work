@@ -17,12 +17,14 @@ import uuid
 import content
 import inventory as inv
 import registration as reg
+import nas
+import remote_io
 
 LOCAL = {'ext2', 'ext3', 'ext4', 'xfs', 'btrfs', 'zfs', 'tmpfs'}
 
 
 def load(path):
-    with content.regular(path) as (stream, s, _):
+    with content.regular(Path(path).absolute()) as (stream, s, _):
         if s.st_size > 128 * 1024 * 1024:
             raise ValueError('Control file too large')
         value = json.load(stream)
@@ -102,6 +104,14 @@ def local(path, rows):
     return m
 
 
+def mutation_storage(path, config, rows):
+    mount = inv.mount_for(str(path), rows)
+    if mount['fstype'] in LOCAL:
+        return mount
+    nas.validate(path, config, rows)
+    return mount
+
+
 def rename_noreplace(source, destination):
     libc = ctypes.CDLL(None, use_errno=True)
     rename = getattr(libc, 'renameat2', None)
@@ -143,7 +153,12 @@ def validate_action(action, config, rows):
         raise ValueError('Each action requires a reason and reviewed role')
     if not action.get('attributes_reviewed'):
         raise ValueError('Attribute restoration limitations must be reviewed')
-    local(target['path'], rows); local(keeper['path'], rows)
+    target_mount = mutation_storage(target['path'], config, rows)
+    keeper_mount = mutation_storage(keeper['path'], config, rows)
+    if target_mount['fstype'] in nas.FILESYSTEMS and keeper_mount != target_mount:
+        raise ValueError('NAS target and keeper must use the same reviewed mount')
+    if target_mount['fstype'] in LOCAL and keeper_mount['fstype'] not in LOCAL:
+        raise ValueError('Remote-only keepers cannot support local cleanup')
     if not any(inv.within(keeper['path'], r['path']) for r in config['managed_roots']) or content.protected(keeper['path'], config):
         raise ValueError('Keeper must be an in-scope business file')
     if keeper['path'] == target['path']:
@@ -157,7 +172,9 @@ def validate_action(action, config, rows):
     root = private_directory(action['quarantine_root'])
     if any(inv.within(str(root), p['path']) or inv.within(p['path'], str(root)) for p in config['projects']):
         raise ValueError('Quarantine root must be outside all projects')
-    local(root, rows)
+    mutation_storage(root, config, rows)
+    if target_mount['fstype'] in nas.FILESYSTEMS and nas.validate(root, config, rows)['root'] != str(root):
+        raise ValueError('Quarantine must be the dedicated probed NAS root')
     if os.stat(root).st_dev != target['fingerprint'][0] or inv.mount_for(str(root), rows) != target['mount']:
         raise ValueError('Quarantine must use the same mount and filesystem')
     if inv.within(keeper['path'], str(root)):
@@ -212,6 +229,7 @@ def plan_cleanup(duplicates, selection, output):
     if selected.get('writers_stopped') is not True:
         raise ValueError('Stop writers and acknowledge writers_stopped in the selection')
     actions = []; rows = inv.mounts(); config = detected['config']
+    remote_io.configure(config)
     for chosen in selected['actions']:
         candidates = [m for m in detected['matches'] if m['content_equal']
                       and m['target']['path'] == chosen['target']
@@ -551,6 +569,13 @@ def execute(directory, phase='quarantine', purge_manifest=None):
     plan = load(directory / 'manifest.json'); validate_plan(plan, directory)
     with operation_locks(plan, directory):
         state = read_state(directory, plan)
+        traffic = state.setdefault('remote_traffic', {'read_bytes': 0, 'copy_attempted_bytes': 0})
+        remote_io.configure(plan['config'], traffic, lambda: save_state(directory, state))
+        for root in sorted({a['quarantine_root'] for a in plan['actions']
+                            if a['target']['mount']['fstype'] in nas.FILESYSTEMS}):
+            evidence = nas.validate(root, plan['config'], inv.mounts())
+            if not nas.probe(root, None, evidence['access_evidence'])['supported']:
+                raise ValueError('Live NAS capability recheck failed; operation not started')
         check_registrations(state)
         if any(e['status'].endswith('_intent') for e in state['entries']):
             raise ValueError('Uncertain interrupted mutation; inspect state.json before recovery')
@@ -728,3 +753,37 @@ def report_cleanup(operation):
                 except Exception as exc:
                     state['phases'][phase]['finalization_error'] = str(exc); save_state(directory, state)
         return output_report(directory, plan, state)
+
+
+def reconcile_cleanup(operation):
+    """Observe interrupted moves without performing any business-file mutation."""
+    directory = private_directory(operation)
+    plan = load(directory / 'manifest.json'); validate_plan(plan, directory)
+    remote_io.configure(plan['config'])
+    with operation_locks(plan, directory):
+        state = read_state(directory, plan)
+        for action, entry in zip(plan['actions'], state['entries']):
+            status = entry['status']
+            if status not in {'quarantine_intent', 'restore_intent'}:
+                continue
+            phase = status.removesuffix('_intent')
+            source = action['target']['path'] if phase == 'quarantine' else action['quarantine']
+            destination = action['quarantine'] if phase == 'quarantine' else action['target']['path']
+            expected = action['target'] if phase == 'quarantine' else entry['quarantined']
+            try:
+                if os.path.lexists(source) and not os.path.lexists(destination):
+                    content.verify_file(expected, source)
+                    entry['status'] = 'planned' if phase == 'quarantine' else 'quarantined'
+                    event(entry, phase, 'reconciled_unstarted')
+                elif not os.path.lexists(source) and os.path.lexists(destination):
+                    actual = content.verify_file(expected, destination, relocated=True)
+                    field = 'quarantined' if phase == 'quarantine' else 'restored'
+                    entry[field] = actual; entry['status'] = field
+                    event(entry, phase, 'verified', evidence='read-only identity and full-content reconciliation')
+                else:
+                    event(entry, phase, 'unresolved', error='Both paths exist or both are absent')
+            except (ValueError, OSError) as exc:
+                event(entry, phase, 'unresolved', error=str(exc))
+        save_state(directory, state)
+        return {'status': 'pending' if any(e['status'].endswith('_intent') for e in state['entries']) else 'reconciled',
+                'entries': state['entries'], 'business_mutations': 0}

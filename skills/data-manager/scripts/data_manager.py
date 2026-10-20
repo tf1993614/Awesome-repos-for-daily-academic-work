@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inventory managed storage, register projects, and execute reviewed local cleanup."""
+"""Inventory managed storage, register projects, and execute reviewed storage cleanup."""
 from __future__ import annotations
 
 import argparse
@@ -16,6 +16,8 @@ from inventory import RUNTIME_MARKER, aggregate, connect, discover, dump, is_run
 from registration import apply, plan, read_metadata
 import content as contents
 import cleanup
+import nas
+import tos_cleanup
 
 
 def write_csv(path, fields, rows):
@@ -196,6 +198,15 @@ def main(argv=None):
     p.add_argument('--manifest', required=True)
     p = sub.add_parser('report-cleanup', help='Verify current cleanup results and retry only measurement/registration finalization')
     p.add_argument('--operation', required=True)
+    p = sub.add_parser('reconcile-cleanup', help='Read-only verification of interrupted cleanup; never repeat a mutation')
+    p.add_argument('--operation', required=True)
+    p = sub.add_parser('probe-nas', help='Test NAS semantics using newly created fixtures in a dedicated quarantine root')
+    p.add_argument('--root', required=True); p.add_argument('--output', required=True)
+    p.add_argument('--access-evidence', required=True, help='Reviewed server-side ACL/access evidence')
+    p = sub.add_parser('tos-controls', help='Read current bucket controls for an access/object-lock review')
+    p.add_argument('--config', required=True)
+    p = sub.add_parser('tos-probe', help='Verify native TOS capabilities using isolated fixture objects only')
+    p.add_argument('--config', required=True); p.add_argument('--output', required=True)
     args = parser.parse_args(argv)
     try:
         if args.command == 'discover':
@@ -203,8 +214,13 @@ def main(argv=None):
                 raise ValueError('--max-depth must be positive')
             result = discover(read_config(args.config), os.path.abspath(args.output), args.full, args.max_depth)
         elif args.command == 'scan':
-            scan(read_config(args.config), args.output, args.resume)
-            result = report(args.output)
+            if cleanup.load(args.config).get('backend') == 'tos':
+                if args.resume:
+                    raise ValueError('Native TOS inventory uses a fresh snapshot, not --resume')
+                result = tos_cleanup.scan(args.config, args.output)
+            else:
+                scan(read_config(args.config), args.output, args.resume)
+                result = report(args.output)
         elif args.command == 'plan-register':
             result = {'manifest': str(plan(args.run, args.archive_registration))}
         elif args.command == 'apply-register':
@@ -214,31 +230,44 @@ def main(argv=None):
         elif args.command == 'find-duplicates':
             if args.max_expanded < 1 or args.max_members < 1:
                 raise ValueError('Archive limits must be positive')
-            result = contents.find_duplicates(args.run, args.output, args.max_expanded, args.max_members)
+            backend = tos_cleanup if (Path(args.run) / 'snapshot.json').exists() else contents
+            result = backend.find_duplicates(args.run, args.output, args.max_expanded, args.max_members)
         elif args.command == 'plan-cleanup':
-            result = cleanup.plan_cleanup(args.duplicates, args.selection, args.output)
+            backend = tos_cleanup if cleanup.load(Path(args.duplicates) / 'duplicates.json').get('backend') == 'tos' else cleanup
+            result = backend.plan_cleanup(args.duplicates, args.selection, args.output)
         elif args.command == 'apply-cleanup':
             manifest = Path(args.manifest).absolute()
             if manifest.name != 'manifest.json':
                 raise ValueError('Expected the operation manifest.json')
-            result = cleanup.execute(manifest.parent)
+            backend = operation_backend(manifest.parent)
+            result = backend.execute(manifest.parent)
         elif args.command == 'restore-cleanup':
-            result = cleanup.execute(args.operation, 'restore')
+            result = operation_backend(args.operation).execute(args.operation, 'restore')
         elif args.command == 'plan-purge':
-            result = cleanup.plan_purge(args.cleanup, args.output)
+            result = operation_backend(args.cleanup).plan_purge(args.cleanup, args.output)
         elif args.command == 'purge':
             manifest = cleanup.load(args.manifest)
-            result = cleanup.execute(manifest['operation'], 'purge', manifest)
+            result = operation_backend(manifest['operation']).execute(manifest['operation'], 'purge', manifest)
         elif args.command == 'report-cleanup':
-            result = cleanup.report_cleanup(args.operation)
+            result = operation_backend(args.operation).report_cleanup(args.operation)
+        elif args.command == 'reconcile-cleanup':
+            backend = operation_backend(args.operation)
+            result = (tos_cleanup.reconcile if backend is tos_cleanup else cleanup.reconcile_cleanup)(args.operation)
+        elif args.command == 'probe-nas':
+            result = nas.probe(args.root, args.output, args.access_evidence)
+            result['status'] = 'complete' if result['supported'] else 'pending'
+        elif args.command == 'tos-controls':
+            result = tos_cleanup.controls(args.config)
+        elif args.command == 'tos-probe':
+            result = tos_cleanup.probe(args.config, args.output)
         else:
-            result = report(args.run)
+            result = tos_cleanup.report_inventory(args.run) if (Path(args.run) / 'snapshot.json').exists() else report(args.run)
         print(json.dumps(result, ensure_ascii=False, indent=2))
-        if args.command in {'scan', 'report'} and result['scan_status'] != 'complete':
+        if args.command in {'scan', 'report'} and result.get('scan_status', result.get('status')) != 'complete':
             return 2
         if args.command == 'find-duplicates' and result['status'] != 'complete':
             return 2
-        if args.command in {'apply-cleanup', 'restore-cleanup', 'purge', 'report-cleanup'} and result['status'] != 'complete':
+        if args.command in {'apply-cleanup', 'restore-cleanup', 'purge', 'report-cleanup', 'reconcile-cleanup', 'probe-nas', 'tos-probe'} and result['status'] not in {'complete', 'reconciled'}:
             return 2
         return 0
     except KeyboardInterrupt:
@@ -250,6 +279,10 @@ def main(argv=None):
     except (ValueError, OSError, KeyError, TypeError, EOFError, RuntimeError, tarfile.TarError, zipfile.BadZipFile, lzma.LZMAError) as exc:
         print(f'Error: {exc}', file=sys.stderr)
         return 1
+
+
+def operation_backend(operation):
+    return tos_cleanup if cleanup.load(Path(operation) / 'manifest.json').get('backend') == 'tos' else cleanup
 
 
 if __name__ == '__main__':

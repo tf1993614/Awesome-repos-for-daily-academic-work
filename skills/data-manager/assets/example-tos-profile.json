@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "backend": "tos",
+  "endpoint": "https://tos-cn-beijing.volces.com",
+  "region": "cn-beijing",
+  "bucket": "your-bucket",
+  "managed_prefixes": [{"prefix": "managed/", "evidence": "Confirmed management responsibility"}],
+  "projects": [{"prefix": "managed/example/", "evidence": "Confirmed storage-copy boundary"}],
+  "quarantine_prefix": "managed/quarantine/",
+  "remote_io": {"workers": 4, "read_bytes_per_second": 67108864},
+  "capability_report": "/home/your-account/data-manager-runtime/tos-probe/probe.json",
+  "security_review": {
+    "evidence": "",
+    "expires": "1970-01-01T00:00:00+00:00",
+    "policy_sha256": "",
+    "object_lock": "unreviewed"
+  }
+}
