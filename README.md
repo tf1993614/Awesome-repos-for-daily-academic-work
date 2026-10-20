@@ -22,9 +22,7 @@
 
 ## Data management
 
-- [data-manager](skills/data-manager/): A bundled skill for inventorying user-managed storage across local disks, NAS, and mounted object storage, maintaining project-level `PROJECT.md` registrations, and verifying duplicate files or compressed/uncompressed equivalents. Supports reviewed local quarantine, recovery, and separately authorized purge; remote storage supports detection only. Registration is required by default when business allocated storage exceeds 100 GB.
-
-  The package includes CLI scripts, a generic profile, a registration template, reference documents, design decisions, and tests. Start with `assets/example-profile.json` inside the skill directory and record your own managed paths and project boundaries. Host-specific personal profiles and runtime caches are excluded from this repository.
+- [data-manager](skills/data-manager/): A storage management skill for local disks, NAS, and TOS, covering inventories, project registration, duplicate detection, reviewed quarantine, recovery, and separately authorized purge.
 
 ## Presentation
 
